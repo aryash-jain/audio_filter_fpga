@@ -6,6 +6,6 @@
 #define SAMPLE_SIZE 1024
 typedef ap_fixed<24, 8> sample_t;
 
-void echo_control(sample_t input, sample_t output, short delay_ms, short decay);
+void echo_control(sample_t input, sample_t output, short delay, short decay);
 
 #endif
