@@ -1,6 +1,6 @@
 #include "Echo.h"
 
-void echo_control(short input, short output, sample_t delay, sample_t decay) 
+void echo_control(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], sample_t delay, sample_t decay) 
 {
     #pragma HLS INTERFACE s_axilite port=input
     #pragma HLS INTERFACE s_axilite port=output
@@ -8,9 +8,11 @@ void echo_control(short input, short output, sample_t delay, sample_t decay)
     #pragma HLS INTERFACE s_axilite port=decay
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS PIPELINE II=1
+
+
     for (int i = 0; i < SAMPLE_SIZE; i++) 
     {
-        sample_t temp = input[i];
+        sample_t sum = input[i];
         if (i >= delay)
         {
             sum += input[i - delay] * decay;
