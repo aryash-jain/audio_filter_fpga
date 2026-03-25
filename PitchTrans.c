@@ -39,12 +39,58 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], fixed_t to
     }
 
     for (int k = 0; k < SAMPLE_SIZE - N; i += H){
+        #pragma HLS PIPELINE II = 1
+        frame[j] = (fixed_t)input[i+j] * hann[j];
+    }
 
-        
+    //fft(frame,spec);
+
+    for(int j = 0; j<N; j++) {
+        #pragma HLS PIPELINE II = 1
+        shiftSpec[j].real = 0;
+        shiftSpec[j].imag = 0;
+    }
+
+    for (int k = 0; k < N/2; k++) {
+        #pragma HLS PIPELINE II = 1
+
+        int newK = (int)(k* ratio + 0.5);
+
+        if(newK > 0 && newK < N/2){
+            shiftSpec[newK].real += spec[k].real;
+            shiftSpec [newK].imag += spec[k].imag;
+
+            shiftSpec[N - newK].real += spec[N -k].real;
+            shiftSpec[N - newK].imag += spec[N-k].imag;
+
+        }
 
 
     }
 
+    //ifft(shiftSpec, outFrame);
+
+
+    //overlap-add
+    for (int y = 0; y < N; y++){
+        #pragma HLS PIPELINE II = 1
+
+        accum_t val = (accum_t)outFrame[j] * hann[j];
+        accum_t sum = (accum_t)output[i+j]+ val;
+
+
+
+        // Clamp to short range
+        if (sum > 32767) sum = 32767;
+        if (sum < -32768) sum = -32768;
+
+        output[i + j] = (short)sum;
+
+
+
+
+
+    }
 
 
 
