@@ -7,7 +7,8 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], fixed_t to
     const int H = HOP_SIZE;
     const fixed_t PI = 3.14159265358979;
 
-    fixed_t ratio = hls::pow((fixed_t)2.0, tones / (fixed_t)12.0);
+    float exp = (float)tones / 12.0f;
+    fixed_t ratio = (fixed_t)hls::powf(2.0f, exp);
 
     fixed_t hann[FRAME_SIZE];
     fixed_t frame[FRAME_SIZE];
@@ -19,7 +20,8 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], fixed_t to
     // Hann window
     for (int n = 0; n < N; n++) {
         #pragma HLS PIPELINE II=1
-        fixed_t wave = hls::cos((fixed_t)(2.0 * PI * n / (N - 1)));
+        float angle = 2.0f * 3.14159265f * (float)n / (float)(N - 1);
+        fixed_t wave = (fixed_t)hls::cosf(angle);
         hann[n] = (fixed_t)0.5 * ((fixed_t)1.0 - wave);
     }
 
