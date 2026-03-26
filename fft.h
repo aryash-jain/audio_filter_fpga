@@ -2,7 +2,11 @@
 #define FFT_H
 
 #include <complex>
+#include <hls_fft.h>
 #include "PitchTrans.h"
+
+typedef ap_fixed<16, 1> fft_data_t;
+typedef std::complex<fft_data_t> fft_cmpx_t;
 
 typedef std::complex<fixed_t> cmpxData;
 

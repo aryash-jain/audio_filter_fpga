@@ -1,5 +1,4 @@
 #include "fft.h"
-#include <hls_fft.h>
 
 struct fft_config : hls::ip_fft::params_t {
     static const bool has_nfft = false;
@@ -19,7 +18,8 @@ typedef hls::ip_fft::config_t<fft_config> fft_runtime_config_t;
 typedef hls::ip_fft::status_t<fft_config> fft_status_t;
 
 void fft_wrapper(fixed_t in[FRAME_SIZE], cmpxData out[FRAME_SIZE]) {
-    cmpxData xn[FRAME_SIZE];
+    fft_cmpx_t xn[FRAME_SIZE];
+    fft_cmpx_t xk[FRAME_SIZE];
     fft_status_t status;
     fft_runtime_config_t config;
 
@@ -27,25 +27,36 @@ void fft_wrapper(fixed_t in[FRAME_SIZE], cmpxData out[FRAME_SIZE]) {
     config.setSch(0x2AB);
 
     for (int i = 0; i < FRAME_SIZE; i++) {
-        #pragma HLS PIPELINE II=1
-        xn[i] = cmpxData(in[i], 0);
+#pragma HLS PIPELINE II=1
+        xn[i] = fft_cmpx_t((fft_data_t)in[i], (fft_data_t)0);
     }
 
-    hls::fft<fft_config>(xn, out, &status, &config);
+    hls::fft<fft_config>(xn, xk, &status, &config);
+
+    for (int i = 0; i < FRAME_SIZE; i++) {
+#pragma HLS PIPELINE II=1
+        out[i] = cmpxData((fixed_t)xk[i].real(), (fixed_t)xk[i].imag());
+    }
 }
 
 void ifft_wrapper(cmpxData in[FRAME_SIZE], fixed_t out[FRAME_SIZE]) {
-    cmpxData xk[FRAME_SIZE];
+    fft_cmpx_t xn[FRAME_SIZE];
+    fft_cmpx_t xk[FRAME_SIZE];
     fft_status_t status;
     fft_runtime_config_t config;
 
     config.setDir(0);
     config.setSch(0x2AB);
 
-    hls::fft<fft_config>(in, xk, &status, &config);
+    for (int i = 0; i < FRAME_SIZE; i++) {
+#pragma HLS PIPELINE II=1
+        xn[i] = fft_cmpx_t((fft_data_t)in[i].real(), (fft_data_t)in[i].imag());
+    }
+
+    hls::fft<fft_config>(xn, xk, &status, &config);
 
     for (int i = 0; i < FRAME_SIZE; i++) {
-        #pragma HLS PIPELINE II=1
-        out[i] = xk[i].real();
+#pragma HLS PIPELINE II=1
+        out[i] = (fixed_t)xk[i].real();
     }
 }
