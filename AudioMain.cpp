@@ -8,14 +8,14 @@ static void copy(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE]) {
     }
 }
 
-void main(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], enable_t en, gain_t vol, sample_t delay, sample_t decay, fixed_t tones) {
+void audio_main(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], enable_t en, gain_t vol, sample_t delay, sample_t decay, fixed_t tones) {
 #pragma HLS INTERFACE axis      port=input
 #pragma HLS INTERFACE axis      port=output
-#pragma HLS INTERFACE s_axilite port=enable
-#pragma HLS INTERFACE s_axilite port=vol_coeff
-#pragma HLS INTERFACE s_axilite port=echo_delay
-#pragma HLS INTERFACE s_axilite port=echo_decay
-#pragma HLS INTERFACE s_axilite port=pitch_tones
+#pragma HLS INTERFACE s_axilite port=en
+#pragma HLS INTERFACE s_axilite port=vol
+#pragma HLS INTERFACE s_axilite port=delay
+#pragma HLS INTERFACE s_axilite port=decay
+#pragma HLS INTERFACE s_axilite port=tones
 #pragma HLS INTERFACE s_axilite port=return
     
     short buf_a[SAMPLE_SIZE];

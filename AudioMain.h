@@ -14,6 +14,6 @@
 // 1st bit controls vol, 2nd echo, 3rd transcription. 3-bit structure allows for multiple simultaneous functions
 typedef ap_uint<3> enable_t;
 
-void main(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], enable_t en, gain_t vol, sample_t delay, sample_t decay, fixed_t tones);
+void audio_main(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], enable_t en, gain_t vol, sample_t delay, sample_t decay, fixed_t tones);
 
 #endif
