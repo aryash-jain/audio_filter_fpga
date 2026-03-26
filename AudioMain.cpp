@@ -17,6 +17,7 @@ void main(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], enable_t en, gain
 #pragma HLS INTERFACE s_axilite port=echo_decay
 #pragma HLS INTERFACE s_axilite port=pitch_tones
 #pragma HLS INTERFACE s_axilite port=return
+    
     short buf_a[SAMPLE_SIZE];
     short buf_b[SAMPLE_SIZE];
 
