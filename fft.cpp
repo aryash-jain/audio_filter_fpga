@@ -35,7 +35,12 @@ void fft_wrapper(fixed_t in[FRAME_SIZE], cmpxData out[FRAME_SIZE]) {
 
     for (int i = 0; i < FRAME_SIZE; i++) {
 #pragma HLS PIPELINE II=1
-        out[i] = cmpxData((fixed_t)xk[i].real(), (fixed_t)xk[i].imag());
+        fft_cmpx_t temp = xk[i];  // ✅ READ ONCE
+
+        fixed_t real_part = (fixed_t)temp.real();
+        fixed_t imag_part = (fixed_t)temp.imag();
+
+        out[i] = cmpxData(real_part, imag_part);
     }
 }
 
@@ -57,6 +62,8 @@ void ifft_wrapper(cmpxData in[FRAME_SIZE], fixed_t out[FRAME_SIZE]) {
 
     for (int i = 0; i < FRAME_SIZE; i++) {
 #pragma HLS PIPELINE II=1
-        out[i] = (fixed_t)xk[i].real();
+        fft_cmpx_t temp = xk[i];  // ✅ READ ONCE
+
+        out[i] = (fixed_t)temp.real();
     }
 }
