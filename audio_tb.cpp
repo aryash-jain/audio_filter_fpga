@@ -34,7 +34,7 @@ static int test_passthrough() {
 
     gen_sine(in, FREQ, 16000);
     enable_t en = 0b000;
-    audio_main(in, out, en, (gain_t)1.0, (sample_t)0, (sample_t)0, (fixed_t)0);
+    audio_main(in, out, en, (gain_t)1.0, (sample_t)0, (sample_t)0, (short)0);
 
     for (int i = 0; i < SAMPLE_SIZE; i++) {
         if (abs(out[i] - in[i]) > 1) { err++; break; }
@@ -52,7 +52,7 @@ static int test_volume_only() {
     enable_t en = 0b001;
 
     /* half gain */
-    audio_main(in, out, en, (gain_t)0.5, (sample_t)0, (sample_t)0, (fixed_t)0);
+    audio_main(in, out, en, (gain_t)0.5, (sample_t)0, (sample_t)0, (short)0);
     for (int i = 0; i < SAMPLE_SIZE; i++) {
         short expected = (short)(in[i] * 0.5);
         if (abs(out[i] - expected) > 1) { err++; break; }
@@ -61,7 +61,7 @@ static int test_volume_only() {
 
     /* clipping at 2× */
     int e2 = 0;
-    audio_main(in, out, en, (gain_t)2.0, (sample_t)0, (sample_t)0, (fixed_t)0);
+    audio_main(in, out, en, (gain_t)2.0, (sample_t)0, (sample_t)0, (short)0);
     for (int i = 0; i < SAMPLE_SIZE; i++) {
         if (out[i] > 32627 || out[i] < -32628) { e2++; break; }
     }
@@ -81,7 +81,7 @@ static int test_echo_only() {
     for (int i = 0; i < SAMPLE_SIZE; i++) in[i] = 0;
     in[0] = 10000;
 
-    audio_main(in, out, en, (gain_t)1.0, (sample_t)4, (sample_t)0.5, (fixed_t)0);
+    audio_main(in, out, en, (gain_t)1.0, (sample_t)4, (sample_t)0.5, (short)0);
 
     if (out[0] != 10000) {
         printf("  impulse[0]:  FAIL (got %d)\n", out[0]);
@@ -101,7 +101,7 @@ static int test_echo_only() {
     // decay=0 → passthrough 
     int e2 = 0;
     gen_sine(in, FREQ, 8000);
-    audio_main(in, out, en, (gain_t)1.0, (sample_t)50, (sample_t)0.0, (fixed_t)0);
+    audio_main(in, out, en, (gain_t)1.0, (sample_t)50, (sample_t)0.0, (short)0);
     for (int i = 0; i < SAMPLE_SIZE; i++) {
         if (abs(out[i] - in[i]) > 1) { e2++; break; }
     }
@@ -123,7 +123,7 @@ static int test_pitch_only() {
 
     // no shift 
     gen_sine(in, f_in, 8000);
-    audio_main(in, out, en, (gain_t)1.0, (sample_t)0, (sample_t)0, (fixed_t)0.0);
+    audio_main(in, out, en, (gain_t)1.0, (sample_t)0, (sample_t)0, (short)0.0);
     find_peak_freq(out, FS, &f_out);
 
     if (fabs(f_out - f_in) > bin_res * 1.5) {
@@ -135,7 +135,7 @@ static int test_pitch_only() {
 
     // octave up
     gen_sine(in, f_in, 8000);
-    audio_main(in, out, en, (gain_t)1.0, (sample_t)0, (sample_t)0, (fixed_t)12.0);
+    audio_main(in, out, en, (gain_t)1.0, (sample_t)0, (sample_t)0, (short)12.0);
     find_peak_freq(out, FS, &f_out);
     double expected = f_in * 2.0;
 
