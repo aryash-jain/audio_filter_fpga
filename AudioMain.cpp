@@ -8,7 +8,7 @@ static void copy(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE]) {
     }
 }
 
-void audio_main(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], enable_t en, gain_t vol, sample_t delay, sample_t decay, fixed_t tones) {
+void audio_main(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], enable_t en, gain_t vol, sample_t delay, sample_t decay, short tones) {
 #pragma HLS INTERFACE axis      port=input
 #pragma HLS INTERFACE axis      port=output
 #pragma HLS INTERFACE s_axilite port=en
