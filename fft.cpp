@@ -6,7 +6,7 @@ struct fft_config : hls::ip_fft::params_t {
     static const unsigned output_width = 24;
     static const unsigned status_width = 8;
     static const unsigned config_width = 16;
-    static const unsigned max_nfft = 10;
+    static const unsigned max_nfft = 9;
     static const unsigned stages_block_ram = 0;
     static const unsigned arch_opt = hls::ip_fft::pipelined_streaming_io;
     static const unsigned ordering_opt = hls::ip_fft::natural_order;
@@ -45,6 +45,7 @@ void fft_wrapper(fixed_t in[FRAME_SIZE], cmpxData out[FRAME_SIZE]) {
 }
 
 void ifft_wrapper(cmpxData in[FRAME_SIZE], fixed_t out[FRAME_SIZE]) {
+    
     fft_cmpx_t xn[FRAME_SIZE];
     fft_cmpx_t xk[FRAME_SIZE];
     fft_status_t status;
