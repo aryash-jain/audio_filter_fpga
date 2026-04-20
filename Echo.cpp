@@ -2,6 +2,8 @@
 
 void echo_control(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], sample_t delay, sample_t decay) 
 {
+#pragma HLS ARRAY_PARTITION variable=input  cyclic factor=4 dim=1
+#pragma HLS ARRAY_PARTITION variable=output cyclic factor=4 dim=1
     int d = (int)delay;
 
     for (int i = 0; i < SAMPLE_SIZE; i++) 
