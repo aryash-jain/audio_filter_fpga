@@ -5,7 +5,7 @@ struct fft_config : hls::ip_fft::params_t {
     static const unsigned input_width = 24;
     static const unsigned output_width = 24;
     static const unsigned status_width = 8;
-    static const unsigned config_width = 16;
+    static const unsigned config_width = 24;  // needs ≥ 2*max_nfft+1 = 19 bits
     static const unsigned max_nfft = 9;
     static const unsigned stages_block_ram = 0;
     static const unsigned arch_opt = hls::ip_fft::pipelined_streaming_io;

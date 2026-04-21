@@ -14,10 +14,6 @@ static const accum_t OLA_NORM = (accum_t)((2.0f * (float)HOP_SIZE) / (float)FRAM
 
 void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tones)
 {
-#pragma HLS INTERFACE ap_none port=input
-#pragma HLS INTERFACE ap_none port=output
-#pragma HLS INTERFACE ap_none port=tones
-
     const int N = FRAME_SIZE;   // 1024
     const int H = HOP_SIZE;     // 256
 
@@ -76,6 +72,7 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
     // Hop loop — 8 hops covers all SAMPLE_SIZE=2048 output samples.
     // Input reads past SAMPLE_SIZE are zero-padded.
     for (int k = 0; k < SAMPLE_SIZE; k += H) {
+#pragma HLS LOOP_TRIPCOUNT min=4 max=4
 
         // Analysis window
         for (int j = 0; j < N; j++) {
@@ -100,46 +97,45 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
 #pragma HLS UNROLL factor=4
 
             int newK = (int)((float)m * (float)ratio + 0.5f);
-            if (newK <= 0 || newK >= N / 2)
-                continue;
+            if (newK > 0 && newK < N / 2) {
+                float re_f    = (float)spec[m].real();
+                float im_f    = (float)spec[m].imag();
+                mag_t   mag   = (mag_t)hls::sqrt(re_f * re_f + im_f * im_f);
+                phase_t phase = (phase_t)hls::atan2f(im_f, re_f);
 
-            float re_f    = (float)spec[m].real();
-            float im_f    = (float)spec[m].imag();
-            mag_t   mag   = (mag_t)hls::sqrt(re_f * re_f + im_f * im_f);
-            phase_t phase = (phase_t)hls::atan2f(im_f, re_f);
+                // Phase delta with expected-advance correction
+                float delta_f = (float)phase
+                              - (float)phase_in[m]
+                              - (float)expected_adv[m];
 
-            // Phase delta with expected-advance correction
-            float delta_f = (float)phase
-                          - (float)phase_in[m]
-                          - (float)expected_adv[m];
+                // Wrap delta to [-π, π]
+                delta_f -= TWO_PI * hls::floorf((delta_f + PI) / TWO_PI);
 
-            // Wrap delta to [-π, π]
-            delta_f -= TWO_PI * hls::floorf((delta_f + PI) / TWO_PI);
+                phase_in[m] = phase;
 
-            phase_in[m] = phase;
+                // Accumulate and wrap output phase
+                float pout_f = (float)phase_out[newK]
+                             + (float)expected_adv[m] * (float)ratio
+                             + delta_f * (float)ratio;
 
-            // Accumulate and wrap output phase
-            float pout_f = (float)phase_out[newK]
-                         + (float)expected_adv[m] * (float)ratio
-                         + delta_f * (float)ratio;
+                pout_f -= TWO_PI * hls::floorf((pout_f + PI) / TWO_PI);
+                phase_out[newK] = (phase_t)pout_f;
 
-            pout_f -= TWO_PI * hls::floorf((pout_f + PI) / TWO_PI);
-            phase_out[newK] = (phase_t)pout_f;
+                fixed_t new_re = (fixed_t)((float)mag * hls::cosf(pout_f));
+                fixed_t new_im = (fixed_t)((float)mag * hls::sinf(pout_f));
 
-            fixed_t new_re = (fixed_t)((float)mag * hls::cosf(pout_f));
-            fixed_t new_im = (fixed_t)((float)mag * hls::sinf(pout_f));
+                // Accumulate — fixes bin collision overwrite
+                shiftSpec[newK] = cmpxData(
+                    shiftSpec[newK].real() + new_re,
+                    shiftSpec[newK].imag() + new_im
+                );
 
-            // Accumulate — fixes bin collision overwrite
-            shiftSpec[newK] = cmpxData(
-                shiftSpec[newK].real() + new_re,
-                shiftSpec[newK].imag() + new_im
-            );
-
-            // Conjugate symmetry for real IFFT
-            shiftSpec[N - newK] = cmpxData(
-                 shiftSpec[newK].real(),
-                -shiftSpec[newK].imag()
-            );
+                // Conjugate symmetry for real IFFT
+                shiftSpec[N - newK] = cmpxData(
+                     shiftSpec[newK].real(),
+                    -shiftSpec[newK].imag()
+                );
+            }
         }
 
         ifft_wrapper(shiftSpec, outFrame);
