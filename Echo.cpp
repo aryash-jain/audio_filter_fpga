@@ -12,11 +12,11 @@ void echo_control(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], sample_t 
         sample_t sum = input[i];
         if (i >= d)
         {
-            sum += input[i - d] * decay;
-            if (sum > 32627)
-                sum = 32627;
-            else if (sum < -32628)
-                sum = -32628;
+            sum += output[i - d] * decay;
+            if (sum > 32767)
+                sum = 32767;
+            else if (sum < -32768)
+                sum = -32768;
         }
         output[i] = (short)sum;
     }

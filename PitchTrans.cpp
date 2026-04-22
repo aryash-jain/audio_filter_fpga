@@ -14,7 +14,7 @@ static const accum_t OLA_NORM = (accum_t)((2.0f * (float)HOP_SIZE) / (float)FRAM
 
 void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tones)
 {
-    const int N = FRAME_SIZE;   // 1024
+    const int N = FRAME_SIZE;   // 512
     const int H = HOP_SIZE;     // 256
 
     // Control path only — float fine here
@@ -69,16 +69,17 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
     cmpxData shiftSpec[FRAME_SIZE];
 #pragma HLS ARRAY_PARTITION variable=spec      cyclic factor=4 dim=1
 #pragma HLS ARRAY_PARTITION variable=shiftSpec cyclic factor=4 dim=1
-    // Hop loop — 8 hops covers all SAMPLE_SIZE=2048 output samples.
-    // Input reads past SAMPLE_SIZE are zero-padded.
-    for (int k = 0; k < SAMPLE_SIZE; k += H) {
-#pragma HLS LOOP_TRIPCOUNT min=4 max=4
+    // Hop loop — 5 hops (k = -H, 0, H, 2H, 3H) gives full 2-frame overlap
+    // for all SAMPLE_SIZE=1024 output samples. Negative/out-of-bounds input
+    // indices are zero-padded.
+    for (int k = -H; k < SAMPLE_SIZE; k += H) {
+#pragma HLS LOOP_TRIPCOUNT min=5 max=5
 
         // Analysis window
         for (int j = 0; j < N; j++) {
 #pragma HLS UNROLL factor=4
             int idx = k + j;
-            frame[j] = (idx < SAMPLE_SIZE)
+            frame[j] = (idx >= 0 && idx < SAMPLE_SIZE)
                        ? (fixed_t)(norm_in[idx] * hann[j])
                        : (fixed_t)0;
         }
@@ -93,8 +94,16 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
         shiftSpec[0]   = spec[0];
         shiftSpec[N/2] = spec[N/2];
 
+        // Track dominant (max-magnitude) input bin per output bin so that
+        // phase_out[newK] reflects the strongest contributor, not last-write-wins.
+        mag_t dominant_mag[FRAME_SIZE / 2];
+        for (int i = 0; i < N / 2; i++) {
+#pragma HLS PIPELINE II=1
+            dominant_mag[i] = (mag_t)0;
+        }
+
         for (int m = 1; m < N / 2; m++) {
-#pragma HLS UNROLL factor=4
+#pragma HLS PIPELINE II=1
 
             int newK = (int)((float)m * (float)ratio + 0.5f);
             if (newK > 0 && newK < N / 2) {
@@ -119,7 +128,12 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
                              + delta_f * (float)ratio;
 
                 pout_f -= TWO_PI * hls::floorf((pout_f + PI) / TWO_PI);
-                phase_out[newK] = (phase_t)pout_f;
+
+                // Only the dominant (largest magnitude) bin drives phase_out
+                if (mag > dominant_mag[newK]) {
+                    dominant_mag[newK] = mag;
+                    phase_out[newK] = (phase_t)pout_f;
+                }
 
                 fixed_t new_re = (fixed_t)((float)mag * hls::cosf(pout_f));
                 fixed_t new_im = (fixed_t)((float)mag * hls::sinf(pout_f));
@@ -144,7 +158,7 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
         for (int j = 0; j < N; j++) {
 #pragma HLS UNROLL factor=4
             int idx = k + j;
-            if (idx < SAMPLE_SIZE)
+            if (idx >= 0 && idx < SAMPLE_SIZE)
                 acc[idx] += (accum_t)(outFrame[j] * hann[j]) * OLA_NORM;
         }
     }
