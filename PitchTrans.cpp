@@ -7,8 +7,9 @@ typedef ap_fixed<24, 3>  phase_t;
 typedef ap_fixed<16, 1>  mag_t;
 typedef ap_fixed<16, 3>  ratio_t;
 
-static const float PI     = 3.14159265358979f;
-static const float TWO_PI = 6.28318530717959f;
+static const float PI        = 3.14159265358979f;
+static const float TWO_PI    = 6.28318530717959f;
+static const float INV_TWO_PI = 1.0f / 6.28318530717959f;
 
 static const accum_t OLA_NORM = (accum_t)((2.0f * (float)HOP_SIZE) / (float)FRAME_SIZE);
 
@@ -102,10 +103,11 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
             dominant_mag[i] = (mag_t)0;
         }
 
+        const float ratio_f = (float)ratio;
         for (int m = 1; m < N / 2; m++) {
-#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=4
 
-            int newK = (int)((float)m * (float)ratio + 0.5f);
+            int newK = (int)((float)m * ratio_f + 0.5f);
             if (newK > 0 && newK < N / 2) {
                 float re_f    = (float)spec[m].real();
                 float im_f    = (float)spec[m].imag();
@@ -113,21 +115,22 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
                 phase_t phase = (phase_t)hls::atan2f(im_f, re_f);
 
                 // Phase delta with expected-advance correction
+                float exp_adv_f = (float)expected_adv[m];
                 float delta_f = (float)phase
                               - (float)phase_in[m]
-                              - (float)expected_adv[m];
+                              - exp_adv_f;
 
                 // Wrap delta to [-π, π]
-                delta_f -= TWO_PI * hls::floorf((delta_f + PI) / TWO_PI);
+                delta_f -= TWO_PI * hls::floorf((delta_f + PI) * INV_TWO_PI);
 
                 phase_in[m] = phase;
 
                 // Accumulate and wrap output phase
                 float pout_f = (float)phase_out[newK]
-                             + (float)expected_adv[m] * (float)ratio
-                             + delta_f * (float)ratio;
+                             + exp_adv_f * ratio_f
+                             + delta_f * ratio_f;
 
-                pout_f -= TWO_PI * hls::floorf((pout_f + PI) / TWO_PI);
+                pout_f -= TWO_PI * hls::floorf((pout_f + PI) * INV_TWO_PI);
 
                 // Only the dominant (largest magnitude) bin drives phase_out
                 if (mag > dominant_mag[newK]) {
@@ -139,16 +142,12 @@ void pitch_shift(short input[SAMPLE_SIZE], short output[SAMPLE_SIZE], short tone
                 fixed_t new_im = (fixed_t)((float)mag * hls::sinf(pout_f));
 
                 // Accumulate — fixes bin collision overwrite
-                shiftSpec[newK] = cmpxData(
-                    shiftSpec[newK].real() + new_re,
-                    shiftSpec[newK].imag() + new_im
-                );
+                fixed_t acc_re = shiftSpec[newK].real() + new_re;
+                fixed_t acc_im = shiftSpec[newK].imag() + new_im;
+                shiftSpec[newK]     = cmpxData( acc_re,  acc_im);
 
                 // Conjugate symmetry for real IFFT
-                shiftSpec[N - newK] = cmpxData(
-                     shiftSpec[newK].real(),
-                    -shiftSpec[newK].imag()
-                );
+                shiftSpec[N - newK] = cmpxData( acc_re, -acc_im);
             }
         }
 
